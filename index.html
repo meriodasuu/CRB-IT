@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT-поддержка | Городская больница</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Шапка с больничной символикой -->
+        <header class="header">
+            <div class="header-icon">🏥</div>
+            <h1>IT-поддержка</h1>
+            <div class="header-subtitle">Городская клиническая больница</div>
+        </header>
+
+        <!-- Основной контент -->
+        <main class="main">
+            <!-- БЛОК АВТОРИЗАЦИИ (показывается по умолчанию) -->
+            <div class="auth-card" id="authBlock">
+                <h2>🔐 Вход в систему</h2>
+                <p class="auth-hint">Введите PIN-код, выданный IT-отделом</p>
+                
+                <div class="form-group">
+                    <label for="pinCode">
+                        <span class="label-icon">🔑</span>
+                        PIN-код сотрудника
+                    </label>
+                    <input 
+                        type="password" 
+                        id="pinCode" 
+                        placeholder="****" 
+                        maxlength="6"
+                        autocomplete="off"
+                        inputmode="numeric"
+                    >
+                </div>
+                
+                <button onclick="checkAuth()" class="submit-btn">
+                    <span class="btn-icon">▶️</span>
+                    Войти в систему
+                </button>
+                
+                <div id="authMessage" class="auth-message"></div>
+                
+                <p class="auth-footer">
+                    Нет доступа? Обратитесь к системному администратору<br>
+                    <small>Внутренний телефон: 12-34</small>
+                </p>
+            </div>
+
+            <!-- ОСНОВНАЯ ФОРМА (скрыта до входа) -->
+            <div class="form-card" id="mainFormBlock" style="display: none;">
+                <h2>📋 Новая заявка на ремонт</h2>
+                <p class="form-hint">Заполните форму — техник придет в течение 15 минут</p>
+
+                <form id="requestForm">
+                    <!-- Номер кабинета -->
+                    <div class="form-group">
+                        <label for="roomNumber">
+                            <span class="label-icon">🚪</span>
+                            Номер кабинета
+                        </label>
+                        <input 
+                            type="text" 
+                            id="roomNumber" 
+                            name="roomNumber" 
+                            placeholder="Например: 305, 12-А, Ординаторская"
+                            required
+                            autocomplete="off"
+                        >
+                    </div>
+
+                    <!-- Тип оборудования -->
+                    <div class="form-group">
+                        <label for="equipmentType">
+                            <span class="label-icon">💻</span>
+                            Что сломалось?
+                        </label>
+                        <select id="equipmentType" name="equipmentType" required>
+                            <option value="" disabled selected>-- Выберите тип оборудования --</option>
+                            <option value="Компьютер">🖥️ Компьютер (не включается, тормозит)</option>
+                            <option value="Принтер">🖨️ Принтер / МФУ (не печатает, замятие)</option>
+                            <option value="Интернет">🌐 Интернет / Локальная сеть</option>
+                            <option value="МИС">📊 Медицинская программа (МИС)</option>
+                            <option value="Монитор">🖵 Монитор (нет изображения)</option>
+                            <option value="Клавиатура/Мышь">⌨️ Клавиатура / Мышь</option>
+                            <option value="Другое">❓ Другое</option>
+                        </select>
+                    </div>
+
+                    <!-- Описание проблемы -->
+                    <div class="form-group">
+                        <label for="problemDescription">
+                            <span class="label-icon">📝</span>
+                            Описание проблемы
+                        </label>
+                        <textarea 
+                            id="problemDescription" 
+                            name="problemDescription" 
+                            rows="4" 
+                            placeholder="Опишите, что именно не работает..."
+                            required
+                        ></textarea>
+                    </div>
+
+                    <!-- Срочность -->
+                    <div class="form-group">
+                        <label for="priority">
+                            <span class="label-icon">⚠️</span>
+                            Срочность
+                        </label>
+                        <select id="priority" name="priority" required>
+                            <option value="Обычная">🟢 Обычная (можно подойти в течение часа)</option>
+                            <option value="Срочная" selected>🟡 Срочная (мешает работе врача)</option>
+                            <option value="Критическая">🔴 Критическая (остановлен приём пациентов)</option>
+                        </select>
+                    </div>
+
+                    <!-- Контактное лицо -->
+                    <div class="form-group">
+                        <label for="contactName">
+                            <span class="label-icon">👤</span>
+                            Ваше имя (для связи)
+                        </label>
+                        <input 
+                            type="text" 
+                            id="contactName" 
+                            name="contactName" 
+                            placeholder="Иванова М.А."
+                            required
+                        >
+                    </div>
+
+                    <!-- Кнопка отправки -->
+                    <button type="submit" class="submit-btn" id="submitBtn">
+                        <span class="btn-icon">📤</span>
+                        Отправить заявку
+                    </button>
+
+                    <div id="formMessage" class="form-message"></div>
+                </form>
+            </div>
+
+            <!-- Информационная панель -->
+            <div class="info-panel">
+                <div class="info-item">
+                    <span class="info-icon">📞</span>
+                    <div>
+                        <strong>Срочная связь с техником</strong>
+                        <p>Внутренний: 12-34</p>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="info-icon">⏰</span>
+                    <div>
+                        <strong>Время работы IT-отдела</strong>
+                        <p>Пн-Пт: 8:00 – 18:00</p>
+                        <p>Сб: 9:00 – 14:00 (дежурный)</p>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="info-icon">📍</span>
+                    <div>
+                        <strong>Где находится техник</strong>
+                        <p>Цокольный этаж, кабинет 004</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Подвал -->
+        <footer class="footer">
+            <p>© 2026 Городская клиническая больница • IT-отдел</p>
+            <p class="footer-small">Система учета заявок v2.0 • Разработано в рамках производственной практики</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

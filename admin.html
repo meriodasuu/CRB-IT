@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Панель администратора | IT-отдел</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header admin-header">
+            <div class="header-icon">🔐</div>
+            <h1>Панель администратора</h1>
+            <div class="header-subtitle">Управление заявками и сотрудниками</div>
+            <button class="logout-btn" onclick="adminLogout()" style="background: rgba(255,255,255,0.2); color: white;">🚪 Выйти</button>
+        </header>
+
+        <main class="main">
+            <!-- Проверка авторизации -->
+            <div id="adminAuthCheck" style="display: none;"></div>
+            
+            <!-- Вкладки -->
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0;">
+                <button class="tab-btn active" id="tabRequestsBtn" onclick="switchTab('requests')">📋 Заявки</button>
+                <button class="tab-btn" id="tabStaffBtn" onclick="switchTab('staff')">👥 Сотрудники</button>
+            </div>
+
+            <!-- ПАНЕЛЬ ЗАЯВОК -->
+            <div id="requestsPanel">
+                <div class="admin-controls">
+                    <button class="refresh-btn" onclick="loadRequests()">
+                        <span>🔄</span> Обновить
+                    </button>
+                    <select id="statusFilter" class="filter-select" onchange="loadRequests()">
+                        <option value="all">Все заявки</option>
+                        <option value="Новая">Только новые</option>
+                        <option value="В работе">В работе</option>
+                        <option value="Выполнено">Выполненные</option>
+                    </select>
+                    <select id="priorityFilter" class="filter-select" onchange="loadRequests()">
+                        <option value="all">Любая срочность</option>
+                        <option value="Критическая">Критическая</option>
+                        <option value="Срочная">Срочная</option>
+                        <option value="Обычная">Обычная</option>
+                    </select>
+                    <button class="clear-btn" onclick="exportToCSV()">
+                        <span>📊</span> Экспорт CSV
+                    </button>
+                    <button class="clear-btn" onclick="clearAllRequests()">
+                        <span>🗑️</span> Очистить всё
+                    </button>
+                    <span class="stats" id="statsDisplay"></span>
+                </div>
+
+                <div class="requests-table-container">
+                    <table class="requests-table" id="requestsTable">
+                        <thead>
+                            <tr>
+                                <th>Время</th>
+                                <th>Кабинет</th>
+                                <th>Тип</th>
+                                <th>Описание</th>
+                                <th>Срочность</th>
+                                <th>Контакт</th>
+                                <th>Автор</th>
+                                <th>Статус</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <tr><td colspan="8" class="empty-message">Загрузка заявок...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ПАНЕЛЬ СОТРУДНИКОВ -->
+            <div id="staffPanel" style="display: none;">
+                <div class="admin-controls">
+                    <button class="refresh-btn" onclick="showAddStaffForm()">
+                        <span>➕</span> Добавить сотрудника
+                    </button>
+                    <span class="stats" id="staffStats"></span>
+                </div>
+                
+                <div id="addStaffForm" style="display: none; background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px;">Регистрация нового сотрудника</h3>
+                    <div style="display: grid; gap: 15px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                        <input type="text" id="newStaffName" placeholder="ФИО полностью" class="filter-select">
+                        <input type="text" id="newStaffDepartment" placeholder="Отделение" class="filter-select">
+                        <input type="text" id="newStaffPin" placeholder="PIN-код (4-6 цифр)" class="filter-select" maxlength="6" inputmode="numeric">
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <button class="refresh-btn" onclick="addStaffMember()">✅ Сохранить</button>
+                        <button class="clear-btn" onclick="hideAddStaffForm()">❌ Отмена</button>
+                    </div>
+                </div>
+                
+                <div class="requests-table-container">
+                    <table class="requests-table">
+                        <thead>
+                            <tr>
+                                <th>ФИО</th>
+                                <th>Отделение</th>
+                                <th>PIN-код</th>
+                                <th>Дата регистрации</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="staffTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="info-panel" style="margin-top: 30px;">
+                <div class="info-item">
+                    <span class="info-icon">👑</span>
+                    <div>
+                        <strong>Права администратора</strong>
+                        <p>Просмотр заявок, изменение статусов, управление сотрудниками, экспорт данных.</p>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="info-icon">🔑</span>
+                    <div>
+                        <strong>PIN-код администратора</strong>
+                        <p>Текущий: <code>7744</code> (можно изменить в script.js)</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>© 2026 Городская клиническая больница • IT-отдел</p>
+            <p class="footer-small">Административная панель v2.0</p>
+        </footer>
+    </div>
+
+    <script>
+        // ===== ПРОВЕРКА АВТОРИЗАЦИИ =====
+        if (sessionStorage.getItem('hospital_role') !== 'admin') {
+            alert('Доступ запрещён. Войдите как администратор.');
+            window.location.href = 'index.html';
+        }
+
+        function adminLogout() {
+            sessionStorage.clear();
+            window.location.href = 'index.html';
+        }
+
+        // ===== ИНИЦИАЛИЗАЦИЯ ДАННЫХ =====
+        if (!localStorage.getItem('hospital_staff')) {
+            const defaultStaff = [
+                { id: 'staff-1', name: 'Иванова Мария Александровна', department: 'Терапевтическое отделение', pin: '3050', registeredAt: new Date().toLocaleString('ru-RU') },
+                { id: 'staff-2', name: 'Петров Владимир Сергеевич', department: 'Хирургия', pin: '1122', registeredAt: new Date().toLocaleString('ru-RU') }
+            ];
+            localStorage.setItem('hospital_staff', JSON.stringify(defaultStaff));
+        }
+
+        if (!localStorage.getItem('hospital_requests')) {
+            const testRequests = [
+                { id: 'test-1', timestamp: new Date(Date.now() - 3600000).toLocaleString('ru-RU'), roomNumber: '305', equipmentType: 'Принтер', problemDescription: 'Не печатает, горит красная лампочка', priority: 'Срочная', contactName: 'Иванова М.А.', authorName: 'Иванова Мария Александровна', authorDept: 'Терапевтическое отделение', status: 'Новая' },
+                { id: 'test-2', timestamp: new Date(Date.now() - 7200000).toLocaleString('ru-RU'), roomNumber: '112', equipmentType: 'Компьютер', problemDescription: 'Сильно тормозит, долго загружается', priority: 'Обычная', contactName: 'Петров В.С.', authorName: 'Петров Владимир Сергеевич', authorDept: 'Хирургия', status: 'В работе' },
+                { id: 'test-3', timestamp: new Date(Date.now() - 86400000).toLocaleString('ru-RU'), roomNumber: 'Регистратура', equipmentType: 'Интернет', problemDescription: 'Нет доступа к МИС', priority: 'Критическая', contactName: 'Сидорова А.Н.', authorName: 'Иванова Мария Александровна', authorDept: 'Терапевтическое отделение', status: 'Выполнено' }
+            ];
+            localStorage.setItem('hospital_requests', JSON.stringify(testRequests));
+        }
+
+        // ===== ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК =====
+        let currentTab = 'requests';
+
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('tab' + (tab === 'requests' ? 'Requests' : 'Staff') + 'Btn').classList.add('active');
+            
+            document.getElementById('requestsPanel').style.display = tab === 'requests' ? 'block' : 'none';
+            document.getElementById('staffPanel').style.display = tab === 'staff' ? 'block' : 'none';
+            
+            document.querySelector('.admin-controls').style.display = tab === 'requests' ? 'flex' : 'none';
+            
+            if (tab === 'staff') {
+                loadStaffList();
+            } else {
+                loadRequests();
+            }
+        }
+
+        // ===== РАБОТА С ЗАЯВКАМИ =====
+        function loadRequests() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const priorityFilter = document.getElementById('priorityFilter').value;
+            
+            let requests = JSON.parse(localStorage.getItem('hospital_requests') || '[]');
+            requests.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            if (statusFilter !== 'all') requests = requests.filter(r => r.status === statusFilter);
+            if (priorityFilter !== 'all') requests = requests.filter(r => r.priority === priorityFilter);
+            
+            const total = JSON.parse(localStorage.getItem('hospital_requests') || '[]').length;
+            const newCount = JSON.parse(localStorage.getItem('hospital_requests') || '[]').filter(r => r.status === 'Новая').length;
+            document.getElementById('statsDisplay').textContent = `Всего: ${total} | Новых: ${newCount}`;
+            
+            const tbody = document.getElementById('tableBody');
+            
+            if (requests.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-message">Нет заявок</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = requests.map(request => {
+                const rowClass = request.priority === 'Критическая' ? 'priority-critical' : (request.priority === 'Срочная' ? 'priority-urgent' : '');
+                const statusClass = request.status === 'Новая' ? 'status-new' : (request.status === 'В работе' ? 'status-progress' : 'status-done');
+                const priorityIcon = request.priority === 'Критическая' ? '🔴' : (request.priority === 'Срочная' ? '🟡' : '🟢');
+                
+                return `
+                    <tr class="${rowClass}" data-id="${request.id}">
+                        <td>${request.timestamp || '—'}</td>
+                        <td><strong>${request.roomNumber || '—'}</strong></td>
+                        <td>${request.equipmentType || '—'}</td>
+                        <td style="max-width: 200px;">${request.problemDescription || '—'}</td>
+                        <td>${priorityIcon} ${request.priority || '—'}</td>
+                        <td>${request.contactName || '—'}</td>
+                        <td>${request.authorName || '—'}<br><small>${request.authorDept || ''}</small></td>
+                        <td>
+                            <span class="status-badge ${statusClass}" onclick="cycleStatus('${request.id}')">
+                                ${request.status || 'Новая'}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function cycleStatus(requestId) {
+            let requests = JSON.parse(localStorage.getItem('hospital_requests') || '[]');
+            const requestIndex = requests.findIndex(r => r.id === requestId);
+            if (requestIndex === -1) return;
+            
+            const currentStatus = requests[requestIndex].status;
+            let newStatus;
+            switch(currentStatus) {
+                case 'Новая': newStatus = 'В работе'; break;
+                case 'В работе': newStatus = 'Выполнено'; break;
+                default: newStatus = 'Новая';
+            }
+            
+            requests[requestIndex].status = newStatus;
+            localStorage.setItem('hospital_requests', JSON.stringify(requests));
+            loadRequests();
+        }
+
+        function exportToCSV() {
+            const requests = JSON.parse(localStorage.getItem('hospital_requests') || '[]');
+            if (requests.length === 0) { alert('Нет заявок для экспорта'); return; }
+            
+            const headers = ['Время', 'Кабинет', 'Тип оборудования', 'Описание', 'Срочность', 'Контакт', 'Автор', 'Отделение', 'Статус'];
+            const rows = requests.map(r => [r.timestamp || '', r.roomNumber || '', r.equipmentType || '', r.problemDescription || '', r.priority || '', r.contactName || '', r.authorName || '', r.authorDept || '', r.status || '']);
+            
+            let csvContent = headers.join(';') + '\n';
+            rows.forEach(row => { csvContent += row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(';') + '\n'; });
+            
+            const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `заявки_ит_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+        }
+
+        function clearAllRequests() {
+            if (confirm('Удалить ВСЕ заявки? Это действие нельзя отменить.')) {
+                localStorage.removeItem('hospital_requests');
+                loadRequests();
+            }
+        }
+
+        // ===== РАБОТА С СОТРУДНИКАМИ =====
+        function loadStaffList() {
+            const staff = JSON.parse(localStorage.getItem('hospital_staff') || '[]');
+            const tbody = document.getElementById('staffTableBody');
+            
+            document.getElementById('staffStats').textContent = `Всего сотрудников: ${staff.length}`;
+            
+            if (staff.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-message">Нет зарегистрированных сотрудников</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = staff.map(member => `
+                <tr>
+                    <td><strong>${member.name}</strong></td>
+                    <td>${member.department || '—'}</td>
+                    <td><code>${member.pin}</code></td>
+                    <td>${member.registeredAt || '—'}</td>
+                    <td>
+                        <button onclick="deleteStaffMember('${member.id}')" style="background: none; border: none; cursor: pointer; color: #dc2626;">🗑️ Удалить</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showAddStaffForm() {
+            document.getElementById('addStaffForm').style.display = 'block';
+        }
+
+        function hideAddStaffForm() {
+            document.getElementById('addStaffForm').style.display = 'none';
+            document.getElementById('newStaffName').value = '';
+            document.getElementById('newStaffDepartment').value = '';
+            document.getElementById('newStaffPin').value = '';
+        }
+
+        function addStaffMember() {
+            const name = document.getElementById('newStaffName').value.trim();
+            const department = document.getElementById('newStaffDepartment').value.trim();
+            const pin = document.getElementById('newStaffPin').value.trim();
+            
+            if (!name || !pin) { alert('Укажите ФИО и PIN-код'); return; }
+            if (pin.length < 4) { alert('PIN-код должен содержать минимум 4 цифры'); return; }
+            if (!/^\d+$/.test(pin)) { alert('PIN-код должен состоять только из цифр'); return; }
+            
+            const staff = JSON.parse(localStorage.getItem('hospital_staff') || '[]');
+            if (staff.some(m => m.pin === pin)) { alert('Сотрудник с таким PIN-кодом уже существует'); return; }
+            
+            const newMember = {
+                id: Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+                name: name,
+                department: department,
+                pin: pin,
+                registeredAt: new Date().toLocaleString('ru-RU')
+            };
+            
+            staff.push(newMember);
+            localStorage.setItem('hospital_staff', JSON.stringify(staff));
+            
+            hideAddStaffForm();
+            loadStaffList();
+        }
+
+        function deleteStaffMember(id) {
+            if (confirm('Удалить сотрудника? Он больше не сможет войти в систему.')) {
+                const staff = JSON.parse(localStorage.getItem('hospital_staff') || '[]');
+                const filtered = staff.filter(m => m.id !== id);
+                localStorage.setItem('hospital_staff', JSON.stringify(filtered));
+                loadStaffList();
+            }
+        }
+
+        // ===== ЗАПУСК =====
+        loadRequests();
+    </script>
+</body>
+</html>
